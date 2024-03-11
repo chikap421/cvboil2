@@ -3,7 +3,7 @@ function bubblemetrics()
     segmentationDir = '/Users/chikamaduabuchi/Documents/paul/segmentation1';
     groundTruthDir = '/Users/chikamaduabuchi/Documents/paul/groundtruth';
     [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
-    plotMetricsArray(metricsArray, imageFileNames);
+    % plotMetricsArray(metricsArray, imageFileNames);
     T = calculateAndDisplayErrors(metricsArray, imageFileNames); % Capture T
     plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'}); % Now T is passed here
 end
@@ -113,31 +113,43 @@ function T = calculateAndDisplayErrors(metricsArray, imageFileNames)
 end
 
 function plotErrorAnalysis(T, metricNames)
-    % T is the table containing your data
-    % metricNames is a cell array of strings indicating which metrics to plot
-    % Example call: plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'})
-    
     numMetrics = numel(metricNames);
+    absoluteErrorColor = [0, 0, 1]; % Blue color for absolute error
+    percentageErrorColor = [1, 0, 0]; % Red color for percentage error
     figure('Name', 'Error Analysis', 'NumberTitle', 'off');
     
     for i = 1:numMetrics
+        metricLabel = metricNames{i};
+        absErrorName = [metricLabel, '_Error'];
+        percErrorName = [metricLabel, '_Perc_Error'];
+        
         subplot(numMetrics, 1, i);
         yyaxis left;
-        absErrorName = [metricNames{i}, '_Error'];
-        scatter(1:height(T), T.(absErrorName), 'filled');
-        ylabel('Absolute Error');
+        scatter(1:height(T), T.(absErrorName), 'filled', 'MarkerFaceColor', absoluteErrorColor, 'MarkerEdgeColor', absoluteErrorColor);
+        if strcmp(metricLabel, 'Contact_Line') % Check if the current metric is Contact_Line
+            ylabel('Absolute Error (px/px^2)', 'FontWeight', 'bold');
+        else
+            ylabel('Absolute Error', 'FontWeight', 'bold');
+        end
+        set(gca, 'YColor', absoluteErrorColor, 'LineWidth', 2, 'FontWeight', 'bold', 'FontSize', 12);
         
         yyaxis right;
-        percErrorName = [metricNames{i}, '_Perc_Error'];
-        plot(1:height(T), T.(percErrorName), '-o');
-        ylabel('Percentage Error (%)');
+        plot(1:height(T), T.(percErrorName), '-o', 'Color', percentageErrorColor, 'MarkerFaceColor', percentageErrorColor);
+        ylabel('Percentage Error (%)', 'FontWeight', 'bold');
+        set(gca, 'YColor', percentageErrorColor, 'LineWidth', 2, 'FontWeight', 'bold', 'FontSize', 12);
         
         % Customize plot
-        title([metricNames{i}, ' Error Analysis']);
+        title([strrep(metricLabel, '_', ' '), ' Error Analysis'], 'FontWeight', 'bold', 'FontSize', 14);
+        xlabel('Image Name', 'FontWeight', 'bold');
         xticks(1:height(T));
         xticklabels(T.Image_Name);
         xtickangle(45);
         grid on;
-        legend('Absolute Error', 'Percentage Error', 'Location', 'best');
+        set(gca, 'FontWeight', 'bold', 'FontSize', 12);
+        box on;
+        
+        if i == 1 % Legend for the first subplot only
+            legend({'Absolute Error', 'Percentage Error'}, 'Location', 'best', 'FontWeight', 'bold');
+        end
     end
 end
