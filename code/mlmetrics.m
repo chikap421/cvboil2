@@ -41,7 +41,7 @@ function plotMetrics(metricsTable, imageNames)
     h = plot(metricsTable{:, :}, '-o', 'LineWidth', 2);
     set(gca, 'ColorOrder', colors, 'NextPlot', 'replacechildren');
     set(h, {'MarkerFaceColor'}, num2cell(colors, 2));
-    grid on; % 
+    grid on;
     set(gca, 'GridLineStyle', '-', 'GridColor', 'k', 'GridAlpha', 0.3); 
     set(gca, 'MinorGridLineStyle', ':', 'MinorGridColor', 'k', 'MinorGridAlpha', 0.05); 
     ax = gca;

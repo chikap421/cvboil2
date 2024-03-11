@@ -3,7 +3,7 @@ function bubblemetrics()
     segmentationDir = '/Users/chikamaduabuchi/Documents/paul/segmentation1';
     groundTruthDir = '/Users/chikamaduabuchi/Documents/paul/groundtruth';
     [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
-    plotMetricsArray(metricsArray, imageFileNames);
+    % plotMetricsArray(metricsArray, imageFileNames);
     T = calculateAndDisplayErrors(metricsArray, imageFileNames);
     plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
 end
@@ -133,11 +133,10 @@ function plotErrorAnalysis(T, metricNames)
         
         yyaxis left;
         plot(1:height(T), T.(absErrorName), 's--', 'Color', absoluteErrorColor, 'MarkerFaceColor', absoluteErrorColor, 'LineWidth', 2, 'MarkerSize', 8);
-        set(gca, 'YMinorTick', 'on');
         if strcmp(metricLabel, 'Contact_Line')
-            ylabel('Error (px/px^2)', 'FontWeight', 'bold');
+            ylabel('Absolute Error (px/px^2)', 'FontWeight', 'bold');
         else
-            ylabel('Error', 'FontWeight', 'bold');
+            ylabel('Absolute Error', 'FontWeight', 'bold');
         end
         set(gca, 'YColor', [0.15, 0.15, 0.15], 'LineWidth', 2, 'FontWeight', 'bold', 'FontSize', 12);
 
@@ -157,12 +156,11 @@ function plotErrorAnalysis(T, metricNames)
         ax.GridLineStyle = '-';
         ax.GridAlpha = 0.5;
         ax.MinorGridLineStyle = ':';
-        ax.MinorGridColor = [0.8, 0.8, 0.8];
-        ax.MinorGridAlpha = 0.4;
+        ax.MinorGridColor = [0, 0, 0];
+        ax.MinorGridAlpha = 0.5;
         ax.XMinorGrid = 'on';
         ax.YMinorGrid = 'on';
         
-        axis tight; set(gca, 'XTickMode', 'auto', 'XMinorTick', 'on', 'YTickMode', 'auto', 'YMinorTick', 'on');
         set(gca, 'FontWeight', 'bold', 'FontSize', 12);
         box on;
         
