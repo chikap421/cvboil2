@@ -2,10 +2,12 @@ function bubblemetrics()
     clc; close all; clear;
     segmentationDir = '/Users/chikamaduabuchi/Documents/paul/segmentation1';
     groundTruthDir = '/Users/chikamaduabuchi/Documents/paul/groundtruth';
-    [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
+    % [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
     % plotMetricsArray(metricsArray, imageFileNames);
-    T = calculateAndDisplayErrors(metricsArray, imageFileNames);
-    plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
+    % T = calculateAndDisplayErrors(metricsArray, imageFileNames);
+    % plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
+    % calculateStatisticalErrorAnalysis(T);
+    visualizeBubblePerimeters()
 end
 
 function [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir)
@@ -133,10 +135,11 @@ function plotErrorAnalysis(T, metricNames)
         
         yyaxis left;
         plot(1:height(T), T.(absErrorName), 's--', 'Color', absoluteErrorColor, 'MarkerFaceColor', absoluteErrorColor, 'LineWidth', 2, 'MarkerSize', 8);
+        set(gca, 'YMinorTick', 'on');
         if strcmp(metricLabel, 'Contact_Line')
-            ylabel('Absolute Error (px/px^2)', 'FontWeight', 'bold');
+            ylabel('Error (px/px^2)', 'FontWeight', 'bold');
         else
-            ylabel('Absolute Error', 'FontWeight', 'bold');
+            ylabel('Error', 'FontWeight', 'bold');
         end
         set(gca, 'YColor', [0.15, 0.15, 0.15], 'LineWidth', 2, 'FontWeight', 'bold', 'FontSize', 12);
 
@@ -156,11 +159,12 @@ function plotErrorAnalysis(T, metricNames)
         ax.GridLineStyle = '-';
         ax.GridAlpha = 0.5;
         ax.MinorGridLineStyle = ':';
-        ax.MinorGridColor = [0, 0, 0];
-        ax.MinorGridAlpha = 0.5;
+        ax.MinorGridColor = [0.8, 0.8, 0.8];
+        ax.MinorGridAlpha = 0.4;
         ax.XMinorGrid = 'on';
         ax.YMinorGrid = 'on';
         
+        axis tight; set(gca, 'XTickMode', 'auto', 'XMinorTick', 'on', 'YTickMode', 'auto', 'YMinorTick', 'on');
         set(gca, 'FontWeight', 'bold', 'FontSize', 12);
         box on;
         
@@ -168,4 +172,76 @@ function plotErrorAnalysis(T, metricNames)
             legend({'Absolute Error', 'Percentage Error'}, 'Location', 'best', 'FontWeight', 'bold');
         end
     end
+end
+
+function calculateStatisticalErrorAnalysis(T)
+    statsFields = {'Dry_Area_Error', 'Dry_Area_Perc_Error', 'Contact_Line_Error', 'Contact_Line_Perc_Error'};
+    statNames = {'Mean', 'Standard Deviation', 'Minimum', 'Maximum'};
+    statsData = zeros(length(statsFields), 4);
+    for i = 1:length(statsFields)
+        data = T.(statsFields{i});
+        statsData(i, 1) = mean(data);
+        statsData(i, 2) = std(data);
+        statsData(i, 3) = min(data);
+        statsData(i, 4) = max(data);
+    end
+    statsTable = array2table(statsData, 'VariableNames', statNames, 'RowNames', statsFields);
+    disp('Statistical Analysis of Errors:');
+    disp(statsTable);
+    writetable(statsTable, 'StatisticalErrorAnalysis.xlsx', 'WriteRowNames', true);
+end
+
+function visualizeBubblePerimeters()
+    % Define file paths
+    cameraImagePath = '/Users/chikamaduabuchi/Documents/paul/processed/algorithm1/Img000000.tif';
+    groundTruthPath = '/Users/chikamaduabuchi/Documents/paul/groundtruth/img000000.tif';
+    segmentedPath = '/Users/chikamaduabuchi/Documents/paul/segmentation1/Img000000.tif';
+
+    % Read images
+    cameraImage = imread(cameraImagePath);
+    groundTruthImage = imbinarize(imread(groundTruthPath));
+    segmentedImage = imbinarize(imread(segmentedPath));
+
+    % Adjust contrast of the camera image for better visualization
+    cameraImageRGB = imadjust(cameraImage);
+
+    % Find edges of segmented and ground truth images and make them thicker
+    groundTruthEdges = dilateEdges(bwperim(groundTruthImage));
+    segmentedEdges = dilateEdges(bwperim(segmentedImage));
+
+    % Convert binary edges to RGB for visualization
+    groundTruthEdgesRGB = cat(3, zeros(size(groundTruthEdges), 'like', groundTruthEdges), groundTruthEdges, zeros(size(groundTruthEdges), 'like', groundTruthEdges));
+    segmentedEdgesRGB = cat(3, segmentedEdges, zeros(size(segmentedEdges), 'like', segmentedEdges), zeros(size(segmentedEdges), 'like', segmentedEdges));
+
+    % Blend edges with camera image
+    overlayCameraGroundTruth = blendOverlay(cameraImageRGB, groundTruthEdgesRGB);
+    overlayCameraSegmented = blendOverlay(cameraImageRGB, segmentedEdgesRGB);
+    overlayCameraSegmentedGroundTruth = blendOverlay(overlayCameraSegmented, groundTruthEdgesRGB);
+
+    % Display and save visualizations
+    visualizeAndSave(overlayCameraGroundTruth, 'Camera and Ground Truth Overlay');
+    visualizeAndSave(overlayCameraSegmented, 'Camera and Segmented Overlay');
+    visualizeAndSave(overlayCameraSegmentedGroundTruth, 'Camera, Segmented, and Ground Truth Overlay');
+end
+
+function edgesDilated = dilateEdges(binaryEdges)
+    % Dilate edges to make them thicker
+    se = strel('disk', 5);  % Create a structural element, you can adjust the size for thickness
+    edgesDilated = imdilate(binaryEdges, se);
+end
+
+function overlayImage = blendOverlay(cameraImageRGB, edgesRGB)
+    % Ensure both the camera image and edges are of type double
+    cameraImageDouble = im2double(cameraImageRGB);
+    edgesDouble = double(edgesRGB) / 255;
+
+    % Blend the edge RGB images with the camera image
+    overlayImage = max(cameraImageDouble, edgesDouble);
+end
+
+function visualizeAndSave(image, titleText)
+    figure; imshow(image);
+    title(strrep(titleText, '_', ' '), 'FontWeight', 'bold', 'FontSize', 14);
+    % Uncomment the line below to save the figure to a file
+    % saveas(gcf, fullfile('path/to/save', [strrep(titleText, ' ', '_'), '.tif']));
 end

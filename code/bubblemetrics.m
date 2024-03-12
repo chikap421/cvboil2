@@ -2,10 +2,12 @@ function bubblemetrics()
     clc; close all; clear;
     segmentationDir = '/Users/chikamaduabuchi/Documents/paul/segmentation1';
     groundTruthDir = '/Users/chikamaduabuchi/Documents/paul/groundtruth';
-    [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
-    plotMetricsArray(metricsArray, imageFileNames);
-    T = calculateAndDisplayErrors(metricsArray, imageFileNames);
-    plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
+    % [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
+    % plotMetricsArray(metricsArray, imageFileNames);
+    % T = calculateAndDisplayErrors(metricsArray, imageFileNames);
+    % plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
+    % calculateStatisticalErrorAnalysis(T);
+    visualizeBubblePerimeters()
 end
 
 function [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir)
@@ -169,5 +171,66 @@ function plotErrorAnalysis(T, metricNames)
         if i == 1
             legend({'Absolute Error', 'Percentage Error'}, 'Location', 'best', 'FontWeight', 'bold');
         end
+    end
+end
+
+function calculateStatisticalErrorAnalysis(T)
+    statsFields = {'Dry_Area_Error', 'Dry_Area_Perc_Error', 'Contact_Line_Error', 'Contact_Line_Perc_Error'};
+    statNames = {'Mean', 'Standard Deviation', 'Minimum', 'Maximum'};
+    statsData = zeros(length(statsFields), 4);
+    for i = 1:length(statsFields)
+        data = T.(statsFields{i});
+        statsData(i, 1) = mean(data);
+        statsData(i, 2) = std(data);
+        statsData(i, 3) = min(data);
+        statsData(i, 4) = max(data);
+    end
+    statsTable = array2table(statsData, 'VariableNames', statNames, 'RowNames', statsFields);
+    disp('Statistical Analysis of Errors:');
+    disp(statsTable);
+    writetable(statsTable, 'StatisticalErrorAnalysis.xlsx', 'WriteRowNames', true);
+end
+
+function visualizeBubblePerimeters()
+    cameraImagePath = '/Users/chikamaduabuchi/Documents/paul/processed/algorithm1/Img000000.tif';
+    groundTruthPath = '/Users/chikamaduabuchi/Documents/paul/groundtruth/img000000.tif';
+    segmentedPath = '/Users/chikamaduabuchi/Documents/paul/segmentation1/Img000000.tif';
+    cameraImage = imread(cameraImagePath);
+    groundTruthImage = imbinarize(imread(groundTruthPath));
+    segmentedImage = imbinarize(imread(segmentedPath));
+    cameraImageAdjusted = imadjust(cameraImage, stretchlim(cameraImage, [0.05, 0.95]));
+    cameraImageRGB = repmat(cameraImageAdjusted, [1, 1, 3]);
+    groundTruthEdges = bwperim(groundTruthImage);
+    segmentedEdges = bwperim(segmentedImage);
+    groundTruthEdgesDilated = dilateEdges(groundTruthEdges);
+    segmentedEdgesDilated = dilateEdges(segmentedEdges);
+    overlayCameraGroundTruth = blendOverlay(cameraImageRGB, groundTruthEdgesDilated, [0, 1, 0]);
+    overlayCameraSegmented = blendOverlay(cameraImageRGB, segmentedEdgesDilated, [1, 0, 0]);
+    overlayCameraSegmentedGroundTruth = blendOverlay(overlayCameraSegmented, groundTruthEdgesDilated, [0, 1, 0]);
+    visualizeAndSave(overlayCameraGroundTruth, 'Camera + GroundTruth');
+    visualizeAndSave(overlayCameraSegmented, 'Camera + Segmented');
+    visualizeAndSave(overlayCameraSegmentedGroundTruth, 'Camera + Segmented + GroundTruth');
+
+    function dilatedEdges = dilateEdges(binaryEdges)
+        se = strel('disk', 5);
+        dilatedEdges = imdilate(binaryEdges, se);
+    end
+
+    function overlayImage = blendOverlay(baseImageRGB, edgesBinary, edgeColor)
+        edgeMask = cat(3, edgesBinary * edgeColor(1), edgesBinary * edgeColor(2), edgesBinary * edgeColor(3));
+        edgeMaskDilated = imdilate(edgeMask, strel('disk', 1));
+        overlayImage = baseImageRGB;
+        for k = 1:3
+            channel = overlayImage(:,:,k);
+            mask = edgeMaskDilated(:,:,k);
+            channel(mask > 0) = 255;
+            overlayImage(:,:,k) = channel;
+        end
+    end
+
+    function visualizeAndSave(image, titleText)
+        figure; imshow(image);
+        titleText = strrep(titleText, '_', ' + ');
+        title(titleText, 'FontWeight', 'bold', 'FontSize', 14);
     end
 end
