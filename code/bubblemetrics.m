@@ -2,11 +2,11 @@ function bubblemetrics()
     clc; close all; clear;
     segmentationDir = '/Users/chikamaduabuchi/Documents/paul/segmentation1';
     groundTruthDir = '/Users/chikamaduabuchi/Documents/paul/groundtruth';
-    % [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
-    % plotMetricsArray(metricsArray, imageFileNames);
-    % T = calculateAndDisplayErrors(metricsArray, imageFileNames);
-    % plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
-    % calculateStatisticalErrorAnalysis(T);
+    [metricsArray, imageFileNames] = calculateAllMetrics(segmentationDir, groundTruthDir);
+    plotMetricsArray(metricsArray, imageFileNames);
+    T = calculateAndDisplayErrors(metricsArray, imageFileNames);
+    plotErrorAnalysis(T, {'Dry_Area', 'Contact_Line'});
+    calculateStatisticalErrorAnalysis(T);
     visualizeBubblePerimeters()
 end
 
@@ -212,7 +212,7 @@ function visualizeBubblePerimeters()
     visualizeAndSave(overlayCameraSegmentedGroundTruth, 'Camera + Segmented + GroundTruth');
 
     function dilatedEdges = dilateEdges(binaryEdges)
-        se = strel('disk', 5);
+        se = strel('disk', 3);
         dilatedEdges = imdilate(binaryEdges, se);
     end
 
